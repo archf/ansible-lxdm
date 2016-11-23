@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  author: Felix Archambault
+  description: A role to manage lxd containers lifecycle on a host.
+  license: MIT
+  min_ansible_version: 2.2
+  platforms:
+    - name: Fedora
+      versions:
+      - 22
+      - 23
+    - name: Ubuntu
+      versions:
+      - trusty
+
+  galaxy_tags:
+    - system
+    - containers
+    - lxd
+    - lxc
+
+dependencies: []

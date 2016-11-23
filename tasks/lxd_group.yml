@@ -1,0 +1,62 @@
+---
+
+# this processes a container group composed of multiple container
+# guess
+
+# - shell: >
+#     curl --get {{lxd_group['host'] ~ ':8443'}}/1.0/containers
+#           --cert ~/.config/lxc/client.crt
+#           --key ~/.config/lxc/client.key -k
+#   with_items: "{{lxd_group}}"
+#   register: raw_clist
+#   delegate_to: localhost
+#   run_once: true
+#   check_mode: true
+
+- name: get list of running containers on erery hosts
+  command: lxc list --format json -c ns
+  register: raw_clist
+
+- debug: raw_clist
+- fail:
+
+# - name: create container (download image if unexisting)
+#   lxd_container:
+#     name: "{{item.name}}"
+#     state: started
+#   with_items: "{{lxd_group}}"
+#   when: (lxdm_state != "absent") and (item.name not in lxcm_existing_containers.stdout)
+
+- name: apply container state to containers in {{lxd_group['name']}}
+  lxd_container:
+    name: "{{item.name}}"
+    state: "{{lxdm_state}}"
+  with_items: "{{lxd_group}}"
+
+#######################################
+# dynamic inventory for provisionning
+#######################################
+
+- name: generate containers' inventory
+  add_host:
+    name: "{{item.name}}.{{lxdm_domain}}"
+    groups: "{{item.grp|default(lxcm_default_grp)}}"
+  with_items: "{{lxd_group}}"
+  when: lxdm_state != "absent"
+
+- name: generate containers' child group
+  add_host:
+    name: "{{item.0.name}}.{{lxdm_domain}}"
+    groups: "{{item.1}}"
+  with_nested:
+    - "{{lxd_group}}"
+    - "{{lxcm_child_grp}}"
+  when: lxdm_state != "absent"
+
+# check if containers needs to be reprovisioned
+- name: set lxdm_provision (boolean)
+  set_fact:
+    lxdm_provision: true
+  when: (lxdm_state == "reloaded") or (lxdm_state != "stopped" and lxdm_state != "absent" and lxdm_state != "frozen" and lxdm_state != "reloaded" )
+  with_items: "{{lxd_group}}"
+  always_run: true

@@ -1,0 +1,6 @@
+---
+
+- include: lxd_group.yml
+  with_items: lxd_groups
+  loop_control:
+    loop_var: lxd_group

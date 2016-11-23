@@ -1,0 +1,14 @@
+---
+
+private_dir: "{{playbook_dir}}/private"
+
+# default container group to add container instance to
+lxcm_child_grp:
+  - "all_c"
+
+# Default dns domain (used when generating inventory dynamically)
+lxdm_domain: "lxd"
+
+# boolean to figure if we need to reprovision or not. Value depends on
+# lxcd_state.
+lxcd_provision: false
