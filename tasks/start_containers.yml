@@ -1,0 +1,4 @@
+---
+
+# when state == started, module needs extra args to know where to pull the
+# image from

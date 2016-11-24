@@ -1,6 +1,17 @@
 ---
 
 - include: lxd_group.yml
-  with_items: lxd_groups
+  # with_items: lxd_containers.lxd_groups
+  with_items: "{{lxd_containers['lxd_groups']}}"
   loop_control:
     loop_var: lxd_group
+
+# check if containers needs to be reprovisioned
+- name: set lxdm_provision (boolean)
+  set_fact:
+    lxdm_provision: true
+  when: lxdm_state == "reloaded" or lxdm_state == "provision"
+  # when: (lxdm_state == "reloaded") or (lxdm_state != "stopped" and lxdm_state != "absent" and lxdm_state != "frozen" and lxdm_state != "reloaded" )
+  check_mode: true
+
+# - debug: var=hostvars

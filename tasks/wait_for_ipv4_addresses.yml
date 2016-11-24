@@ -1,0 +1,9 @@
+---
+
+- name: launch containers of group '{{lxd_group["name"]}}'
+  lxd_container:
+    name: "{{item.name}}"
+    state: "{{lxdm_state}}"
+    url: "{{lxd_containers['url']}}:8443"
+    wait_for_ipv4_addresses: yes
+  with_items: "{{lxd_group['containers']}}"

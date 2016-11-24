@@ -8,20 +8,29 @@ description: |
 
   ```bash
   # start container (akin to vagrant up)
-  alias acu="ansible -i local -e lxcm_state=started"
+  alias acu="ansible -i local -e lxdm_state=started"
 
   # start container (akin to vagrant halt)
-  alias ach="ansible -i local -e lxcm_state=stopped"
+  alias ach="ansible -i local -e lxdm_state=stopped"
 
   # start container (akin to vagrant reload)
-  alias acu="ansible -i local -e lxcm_state=restarted"
+  alias acu="ansible -i local -e lxdm_state=restarted"
 
   # start container (akin to vagrant destroy)
-  alias acd="ansible -i local -e lxcm_state=absent"
+  alias acd="ansible -i local -e lxdm_state=absent"
 
   # freeze container
-  alias acu="ansible -i local -e lxcm_state=frozen"
+  alias acu="ansible -i local -e lxdm_state=frozen"
+
   ```
+
+  ```
+
+  ## Usage
+
+  Terminology and structure will try to akin to kubernetes.
+
+  ```yaml
 
 todos: []
 role_stack: |

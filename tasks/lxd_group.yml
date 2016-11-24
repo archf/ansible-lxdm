@@ -1,24 +1,52 @@
 ---
 
-# this processes a container group composed of multiple container
+# this processes a lxd group which is composed of multiple container
 # guess
 
-# - shell: >
-#     curl --get {{lxd_group['host'] ~ ':8443'}}/1.0/containers
-#           --cert ~/.config/lxc/client.crt
-#           --key ~/.config/lxc/client.key -k
-#   with_items: "{{lxd_group}}"
+# - name: get list of running containers on every hosts
+#   command: lxc list --format json -c ns
 #   register: raw_clist
-#   delegate_to: localhost
-#   run_once: true
-#   check_mode: true
 
-- name: get list of running containers on erery hosts
-  command: lxc list --format json -c ns
-  register: raw_clist
+- debug: var=lxd_containers
+- debug: var=lxd_group
 
-- debug: raw_clist
-- fail:
+# - shell: |
+#     curl --get {{lxd_containers['url'] ~ ':8443'}}/1.0/containers \
+#          --cert ~/.config/lxc/client.crt \
+#          --key ~/.config/lxc/client.key -k --silent
+#   register: raw_clist
+
+# # - debug: var=raw_clist
+
+# - set_fact:
+#     raw_clist: "{{raw_clist['stdout'] | from_json }}"
+
+# - set_fact:
+#     clist: "{{raw_clist['metadata'] }}"
+
+# - debug: var=clist
+
+# - include: start_containers.yml
+
+# todo: create the alias image if absent => pull image, for the mvp we assume
+# it's there
+# todo: make a second loop to wait for ipv4
+- name: launch containers of group '{{lxd_group["name"]}}'
+  lxd_container:
+    name: "{{item.name}}"
+    state: "{{lxdm_state}}"
+    url: "{{lxd_containers['url']}}:8443"
+    source:
+      type: image
+      alias: "{{lxd_containers['alias']}}"
+      protocol: lxd
+  with_items: "{{lxd_group['containers']}}"
+  register: status
+
+- debug: var=status
+
+- debug: msg="'name:' {{item['item']['name']}} 'state:' {{item['invocation']['module_args']['state']}}"
+  with_items: "{{status['results']}}"
 
 # - name: create container (download image if unexisting)
 #   lxd_container:
@@ -27,11 +55,17 @@
 #   with_items: "{{lxd_group}}"
 #   when: (lxdm_state != "absent") and (item.name not in lxcm_existing_containers.stdout)
 
-- name: apply container state to containers in {{lxd_group['name']}}
-  lxd_container:
-    name: "{{item.name}}"
-    state: "{{lxdm_state}}"
-  with_items: "{{lxd_group}}"
+# - name: apply container state to containers in {{lxd_group['name']}}
+#   lxd_container:
+#     name: "{{item.name}}"
+#     state: "{{lxdm_state}}"
+#   with_items: "{{lxd_group}}"
+
+# - name: apply container state to containers in {{lxd_group['name']}}
+#   lxd_container:
+#     name: "{{item.name}}"
+#     state: "{{lxdm_state}}"
+#   with_items: "{{lxd_group}}"
 
 #######################################
 # dynamic inventory for provisionning
@@ -39,24 +73,21 @@
 
 - name: generate containers' inventory
   add_host:
-    name: "{{item.name}}.{{lxdm_domain}}"
-    groups: "{{item.grp|default(lxcm_default_grp)}}"
-  with_items: "{{lxd_group}}"
+    name: "{{item.name}} ansible_connection=lxd"
+    groups: "{{lxd_group['name']}}"
+  with_items: "{{lxd_group['containers']}}"
   when: lxdm_state != "absent"
+  check_mode: true
 
-- name: generate containers' child group
-  add_host:
-    name: "{{item.0.name}}.{{lxdm_domain}}"
-    groups: "{{item.1}}"
-  with_nested:
-    - "{{lxd_group}}"
-    - "{{lxcm_child_grp}}"
-  when: lxdm_state != "absent"
+- include: wait_for_ipv4_addresses.yml
+  when: lxdm_state != "absent" and lxdm_state != "provision"
 
-# check if containers needs to be reprovisioned
-- name: set lxdm_provision (boolean)
-  set_fact:
-    lxdm_provision: true
-  when: (lxdm_state == "reloaded") or (lxdm_state != "stopped" and lxdm_state != "absent" and lxdm_state != "frozen" and lxdm_state != "reloaded" )
-  with_items: "{{lxd_group}}"
-  always_run: true
+  with_items: "{{lxd_group['containers']}}"
+# - name: generate containers' child group
+#   add_host:
+#     name: "{{item.0.name}}.{{lxdm_domain}}"
+#     groups: "{{item.1}}"
+#   with_nested:
+#     - "{{lxd_group}}"
+#     - "{{lxcm_child_grp}}"
+#   when: lxdm_state != "absent"
