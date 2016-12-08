@@ -1,17 +1,90 @@
 ---
 
-- include: lxd_group.yml
-  # with_items: lxd_containers.lxd_groups
-  with_items: "{{lxd_containers['lxd_groups']}}"
-  loop_control:
-    loop_var: lxd_group
+# - name: configure default profile
+#   lxd_profile:
+#     url: "{{lxd_containers['url']}}:8443"
+#     # These cert_file and key_file values are equal to the default values.
+#     #cert_file: "{{ lookup('env', 'HOME') }}/.config/lxc/client.crt"
+#     #key_file: "{{ lookup('env', 'HOME') }}/.config/lxc/client.key"
+#     name: "{{lxd_containers['lxd_profiles']['name']}}"
+#     state: present
+#     config: >
+#       {
+#     }
 
-# check if containers needs to be reprovisioned
-- name: set lxdm_provision (boolean)
-  set_fact:
-    lxdm_provision: true
-  when: lxdm_state == "reloaded" or lxdm_state == "provision"
-  # when: (lxdm_state == "reloaded") or (lxdm_state != "stopped" and lxdm_state != "absent" and lxdm_state != "frozen" and lxdm_state != "reloaded" )
-  check_mode: true
+# # fixme: do this for bridge device only...
+# # Set ip forwarding on in /proc and do not reload the sysctl file
+# - name: enable ipv4 forwarding
+#   sysctl: name="net.ipv4.ip_forward" value=1 sysctl_set=yes
 
-# - debug: var=hostvars
+# todo: create the alias image if absent => pull image, for the mvp we assume
+
+# # it's there
+# - name: pull images
+#   lxd_container:
+#     # to be valid, a name must be solely the host part of the fqdn
+#     name: centos7-4
+#     source:
+#       # alias: "ubuntu/xenial/amd64"
+#       alias: "centos/7/amd64"
+#       server: https://us.images.linuxcontainers.org
+#       # type can be: image", "migration", "copy" or "none"
+#       type: copy
+#       # mode: pull
+#       mode: pull
+
+# this is a seperate task as the lxd_container module doesn't support the omit
+# default variables for keys inside the source dict
+
+- name: apply containers state (pull mode)
+  lxd_container:
+    # to be valid, a name must be solely the host part of the fqdn
+    name: "{{item}}"
+    state: "{{lxdm_state}}"
+    url: "{{hostvars[item]['lxdm_url']|default(omit)}}"
+    source:
+      # alias must be of the explicit form: "centos/7/amd64"
+      alias: "{{hostvars[item]['lxdm_image_alias']}}"
+      server: "{{hostvars[item]['lxdm_server']}}"
+      # One of "local" (default) or "pull"
+      mode: "{{hostvars[item]['lxdm_mode']|default(lxdm_defaults['mode'])}}"
+      # type can be: image", "migration", "copy" or "none"
+      type: image
+      protocol: "{{hostvars[item]['lxdm_protocol']|default(lxdm_defaults['protocol'])}}"
+  with_items: "{{groups['lxdguests']}}"
+  when: hostvars[item]['lxdm_mode'] == 'pull' and lxdm_state != 'provision'
+
+# todo: create the alias image if absent => pull image, for the mvp we assume
+# it's there
+- name: launch containers (local mode)
+  lxd_container:
+    # to be valid, a name must be solely the host part of the fqdn
+    name: "{{item}}"
+    state: "{{lxdm_state}}"
+    url: "{{hostvars[item]['lxdm_url']|default(omit)}}"
+    source:
+      alias: "{{hostvars[item]['lxdm_image_alias']}}"
+      # One of "local" (default) or "pull"
+      mode: "{{hostvars[item]['lxdm_mode']|default(lxdm_defaults['mode'])}}"
+      # type can be: image", "migration", "copy" or "none"
+      type: image
+      protocol: "{{hostvars[item]['lxdm_protocol']|default(lxdm_defaults['protocol'])}}"
+  with_items: "{{groups['lxdguests']}}"
+  when: (hostvars[item]['lxdm_mode'] is undefined or hostvars[item]['lxdm_mode'] == 'pull' or hostvars[item]['lxdm_mode'] == 'local') and lxdm_state != 'provision'
+  # register: status
+
+- name: wait for ipv4 addresses
+  lxd_container:
+    name: "{{item}}"
+    url: "{{hostvars[item]['lxdm_url']|default(omit)}}"
+    wait_for_ipv4_addresses: yes
+  with_items: "{{groups['lxdguests']}}"
+  when: lxdm_state == 'started' or lxdm_state == 'restarted'
+
+# - include: wait_for_ipv4_addresses.yml
+#   when: lxdm_state != "absent" and lxdm_state != "provision"
+#
+
+# - name: attach network to 'default' profile
+#   command: lxc network attach-profile {{lxdm_network|default(lxdm_defaults['network']}}
+#   when: lxdm_network|default(lxdm_network['network']) in 'ansible_interfaces'"

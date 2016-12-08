@@ -7,8 +7,14 @@
 #   command: lxc list --format json -c ns
 #   register: raw_clist
 
-- debug: var=lxd_containers
-- debug: var=lxd_group
+# - debug: var=lxd_containers
+# - debug: var=lxd_group
+
+# - debug: var=status
+- debug: msg={{hostvars[item]['ansible_connection']}}
+  with_items: "{{ groups['lxdguests'] }}"
+
+- fail:
 
 # - shell: |
 #     curl --get {{lxd_containers['url'] ~ ':8443'}}/1.0/containers \
@@ -43,8 +49,7 @@
   with_items: "{{lxd_group['containers']}}"
   register: status
 
-- debug: var=status
-
+# - debug: var=status
 - debug: msg="'name:' {{item['item']['name']}} 'state:' {{item['invocation']['module_args']['state']}}"
   with_items: "{{status['results']}}"
 

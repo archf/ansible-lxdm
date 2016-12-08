@@ -2,13 +2,27 @@
 
 private_dir: "{{playbook_dir}}/private"
 
-# default container group to add container instance to
-lxcm_child_grp:
-  - "all_c"
+lxdm_defaults:
+  # image", "migration", "copy" or "none"
+  type: image
+  # One of "local" (default) or "pull"
+  mode: local
+  # lxd (default) | simplestreams. See https://launchpad.net/simplestreams
+  protocol: lxd
+  type: image
+  port: 8443
 
-# Default dns domain (used when generating inventory dynamically)
-lxdm_domain: "lxd"
+lxdm_network:
+
+  # default network to use
+  network: br0
+
+  # default dns domain (lxd default)
+  dns_domain: lxd
+
+# # Default dns domain (used when generating inventory dynamically)
+# lxdm_domain: "lxd"
 
 # boolean to figure if we need to reprovision or not. Value depends on
 # lxcd_state.
-lxcd_provision: false
+lxdm_provision: false

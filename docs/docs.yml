@@ -2,39 +2,52 @@
 github_account: archf
 # requirements:
 description: |
-  The goal is to get vagrant, vagrant-lxc, livirt-lxc out of the way.
 
-  Define useful alias
+  Special role to manage lxc containers lifecycle.
 
-  ```bash
-  # start container (akin to vagrant up)
-  alias acu="ansible -i local -e lxdm_state=started"
-
-  # start container (akin to vagrant halt)
-  alias ach="ansible -i local -e lxdm_state=stopped"
-
-  # start container (akin to vagrant reload)
-  alias acu="ansible -i local -e lxdm_state=restarted"
-
-  # start container (akin to vagrant destroy)
-  alias acd="ansible -i local -e lxdm_state=absent"
-
-  # freeze container
-  alias acu="ansible -i local -e lxdm_state=frozen"
-
-  ```
-
-  ```
+  The best way to use this is with this convenient shell wrapper script
+  called [acm](https://github.com/archf/acm). I wanted to be able to talk to
+  the lxd hypervisor directly using the `lxd_container` module.
 
   ## Usage
 
-  Terminology and structure will try to akin to kubernetes.
+  *You can define an inventory file such as*
 
-  ```yaml
+  ```
+  [lxdhosts]
+  mylxdhypervisor.example.org
 
-todos: []
+  [container-group1]
+  c1
+
+  [container-group2]
+  c2 lxdm_image_alias=centos7
+  c3
+
+  [lxdguests:children]
+  container-group1
+  container-group2
+
+  [lxdguests:vars]
+  # if you know your hydervisor is `localhost` and/or you have no sshd running
+  # in the containers you can use the connection module.
+  ansible_connection=lxd
+
+  # These are the variables
+  lxdm_image_alias=centos6
+  ```
+
+  See the other `lxdm` variables you can use in the role variabes section.
+
+  *IMPORTANT*
+
+  This role doesn't manage images. It can only manage containers. You can
+  however lauch a container using `lxdm_mode=pull` and specifing
+  `lxdm_server=<url of image server>`. For now, the pulled image cannot be
+  assigned a local alias.
+
+# todos: []
+
 role_stack: |
   This role was carefully selected to be part an ultimate deck of roles to manage
   your infrastructure.
-
-  All roles' documentation is wrapped in this [convenient guide](http://127.0.0.1:8000/).

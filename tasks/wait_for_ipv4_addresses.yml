@@ -1,6 +1,6 @@
 ---
 
-- name: launch containers of group '{{lxd_group["name"]}}'
+- name: wait for ipv4 addresses
   lxd_container:
     name: "{{item.name}}"
     state: "{{lxdm_state}}"
